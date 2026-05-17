@@ -49,6 +49,7 @@ class AnchorWatchService {
           e.radius = radiusMeters;
           e.maxDrift = 0;
           e.dragAlertCount = 0;
+          e.droppedAt = new Date();
         });
         this.activeEventId = event.id;
       })

@@ -26,7 +26,9 @@ export const requestLocationPermission = async (): Promise<boolean> => {
           buttonNegative: 'Skip',
         },
       );
-      return bgResult === PermissionsAndroid.RESULTS.GRANTED;
+      // Background location is best-effort; fine location is sufficient for core features
+      void bgResult;
+      return true;
     }
 
     return true;

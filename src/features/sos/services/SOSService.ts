@@ -152,7 +152,7 @@ class SOSService {
     onProgress?: (result: SOSResult) => void,
   ): Promise<SOSResult[]> {
     const vesselName =
-      (await AsyncStorage.getItem('vessel_name')) ?? 'Unknown Vessel';
+      (await AsyncStorage.getItem('@mg_vessel_name')) ?? 'Unknown Vessel';
     const contacts = await this.getEmergencyContacts();
 
     if (contacts.length === 0) {
