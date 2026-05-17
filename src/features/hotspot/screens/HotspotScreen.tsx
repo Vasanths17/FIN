@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Alert,
   Modal,
@@ -9,8 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MapView, Camera, ShapeSource, CircleLayer } from '@maplibre/maplibre-react-native';
-import * as turf from '@turf/turf';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -59,8 +57,6 @@ const StarRating: React.FC<{ rating: number; onRate?: (r: number) => void }> = (
 const HotspotScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const cameraRef = useRef<Camera>(null);
-
   const [hotspots, setHotspots] = useState<HotspotData[]>([]);
   const [filter, setFilter] = useState<string>('All');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -86,13 +82,6 @@ const HotspotScreen: React.FC = () => {
     [hotspots, filter],
   );
 
-  // GeoJSON feature collection for map markers
-  const featureCollection = useMemo(() => turf.featureCollection(
-    filtered.map(h =>
-      turf.point([h.lng, h.lat], { id: h.id, catchType: h.catchType }),
-    ),
-  ), [filtered]);
-
   const openAddModal = (lat = DEMO_LAT, lng = DEMO_LNG) => {
     setNewLat(lat);
     setNewLng(lng);
@@ -102,22 +91,6 @@ const HotspotScreen: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const handleMapLongPress = useCallback((e: any) => {
-    const [lng, lat] = e.geometry.coordinates;
-    openAddModal(lat, lng);
-    cameraRef.current?.setCamera({
-      centerCoordinate: [lng, lat],
-      animationDuration: 400,
-    });
-  }, []);
-
-  const handleMarkerPress = useCallback((e: any) => {
-    const props = e.features?.[0]?.properties;
-    if (props?.id) {
-      const spot = hotspots.find(h => h.id === props.id);
-      if (spot) setSelectedHotspot(spot);
-    }
-  }, [hotspots]);
 
   const saveHotspot = async () => {
     setSaving(true);
@@ -163,56 +136,20 @@ const HotspotScreen: React.FC = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]}>
-        {/* ── Map ───────────────────────────────────────────────────────────── */}
-        <View style={styles.mapWrap}>
-          <MapView
-            style={StyleSheet.absoluteFill}
-            styleURL={MAP_STYLE}
-            attributionEnabled={false}
-            logoEnabled={false}
-            pitchEnabled={false}
-            onLongPress={handleMapLongPress}
-          >
-            <Camera
-              ref={cameraRef}
-              centerCoordinate={[DEMO_LNG, DEMO_LAT]}
-              zoomLevel={7}
-              animationMode="flyTo"
-              animationDuration={0}
-            />
-
-            {featureCollection.features.length > 0 && (
-              <ShapeSource
-                id="hotspots-src"
-                shape={featureCollection}
-                onPress={handleMarkerPress}
-              >
-                {/* @ts-ignore */}
-                <CircleLayer
-                  id="hotspot-circles"
-                  style={{
-                    circleRadius: 10,
-                    circleColor: [
-                      'match', ['get', 'catchType'],
-                      'Tuna',    '#FF6B6B',
-                      'Mackerel','#4ECDC4',
-                      'Sardine', '#45B7D1',
-                      'Prawns',  '#F7B731',
-                      'Crab',    '#FC5C65',
-                      '#A55EEA',
-                    ],
-                    circleStrokeWidth: 2,
-                    circleStrokeColor: '#FFFFFF',
-                    circleOpacity: 0.9,
-                  }}
-                />
-              </ShapeSource>
-            )}
-          </MapView>
-
-          <View style={styles.mapHint}>
-            <Text style={styles.mapHintText}>Long-press map to add spot</Text>
+        {/* ── Location summary card ─────────────────────────────────────────── */}
+        <View style={styles.locationCard}>
+          <View style={styles.locationRow}>
+            <Icon name="map-pin" size={16} color={theme.colors.primary} />
+            <Text style={styles.locationCoord}>
+              {DEMO_LAT.toFixed(4)}° N  ·  {DEMO_LNG.toFixed(4)}° E
+            </Text>
+            <View style={styles.simBadge}>
+              <Text style={styles.simBadgeText}>DEMO</Text>
+            </View>
           </View>
+          <Text style={styles.locationHint}>
+            Tap  <Icon name="plus" size={12} color="#5A6380" />  to add a fishing spot at your current position
+          </Text>
         </View>
 
         {/* ── Filter chips ────────────────────────────────────────────────── */}
@@ -375,17 +312,21 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   addBtn: { padding: 4 },
   title: { color: '#FFFFFF', fontSize: 22, fontWeight: '700', flex: 1 },
-  mapWrap: {
-    height: 250,
-    backgroundColor: '#0a1628',
+  locationCard: {
+    margin: 16,
+    marginBottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  mapHint: {
-    position: 'absolute',
-    bottom: 8,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  locationCoord: { color: '#8892B0', fontSize: 13, fontFamily: 'monospace', flex: 1 },
+  simBadge: { backgroundColor: 'rgba(255,165,2,0.15)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  simBadgeText: { color: '#FFA502', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  locationHint: { color: '#3A4460', fontSize: 12 },
+  // (mapHintText kept for compatibility)
   mapHintText: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 11,

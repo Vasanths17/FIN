@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Animated,
   ScrollView,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MapView, Camera, UserLocation, ShapeSource, FillLayer, LineLayer, CircleLayer } from '@maplibre/maplibre-react-native';
-import * as turf from '@turf/turf';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -19,7 +17,6 @@ import database from '../../../core/database/database';
 import AnchorEvent from '../models/AnchorEvent';
 import { theme } from '../../../core/theme';
 
-const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 const RADII = [30, 50, 100, 200];
 
 // Demo position — Arabian Sea (same as MapScreen)
@@ -35,21 +32,10 @@ interface HistoryEntry {
   dragCount: number;
 }
 
-interface RawLocation {
-  coords: {
-    latitude: number;
-    longitude: number;
-    speed: number | null;
-    heading: number | null;
-    accuracy: number | null;
-  };
-}
-
 const AnchorScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const cameraRef = useRef<Camera>(null);
-  const dragPulse = useRef(new Animated.Value(1)).current;
+  const dragPulse = React.useRef(new Animated.Value(1)).current;
 
   const [status, setStatus] = useState(AnchorWatchService.getStatus());
   const [selectedRadius, setSelectedRadius] = useState(50);
@@ -100,55 +86,14 @@ const AnchorScreen: React.FC = () => {
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
-  // @ts-ignore — onUpdate type differs between MapLibre versions
-  const handleLocationUpdate = useCallback((loc: RawLocation) => {
-    const lat = loc.coords.latitude;
-    const lng = loc.coords.longitude;
-    setBoatLat(lat);
-    setBoatLng(lng);
-    AnchorWatchService.updatePosition(lat, lng);
-  }, []);
-
   const dropAnchor = useCallback(() => {
     AnchorWatchService.dropAnchor(boatLat, boatLng, selectedRadius);
-    cameraRef.current?.setCamera({
-      centerCoordinate: [boatLng, boatLat],
-      zoomLevel: 16,
-      animationDuration: 600,
-    });
   }, [boatLat, boatLng, selectedRadius]);
 
   const liftAnchor = useCallback(async () => {
     AnchorWatchService.liftAnchor();
     await loadHistory();
   }, [loadHistory]);
-
-  // Map GeoJSON shapes — memoised to avoid churn
-  const radiusCircleShape = useMemo(() => {
-    if (!status.isAnchored || !status.anchorPoint) return null;
-    return turf.circle(
-      [status.anchorPoint.lng, status.anchorPoint.lat],
-      status.radius,
-      { steps: 64, units: 'meters' },
-    );
-  }, [status.isAnchored, status.anchorPoint, status.radius]);
-
-  const anchorLineShape = useMemo(() => {
-    if (!status.isAnchored || !status.anchorPoint) return null;
-    return turf.lineString([
-      [status.anchorPoint.lng, status.anchorPoint.lat],
-      [boatLng, boatLat],
-    ]);
-  }, [status.isAnchored, status.anchorPoint, boatLat, boatLng]);
-
-  const anchorPointShape = useMemo(() => {
-    if (!status.isAnchored || !status.anchorPoint) return null;
-    return turf.point([status.anchorPoint.lng, status.anchorPoint.lat]);
-  }, [status.isAnchored, status.anchorPoint]);
-
-  const mapCenter: [number, number] = status.isAnchored && status.anchorPoint
-    ? [status.anchorPoint.lng, status.anchorPoint.lat]
-    : [boatLng, boatLat];
 
   const driftPct = status.isAnchored && status.radius > 0
     ? Math.min(status.currentDistance / status.radius, 1)
@@ -177,86 +122,30 @@ const AnchorScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Mini map ────────────────────────────────────────────────────── */}
-        <View style={styles.mapWrap}>
-          <MapView
-            style={StyleSheet.absoluteFill}
-            styleURL={MAP_STYLE}
-            attributionEnabled={false}
-            logoEnabled={false}
-            pitchEnabled={false}
-            compassEnabled={false}
-          >
-            <Camera
-              ref={cameraRef}
-              centerCoordinate={mapCenter}
-              zoomLevel={status.isAnchored ? 16 : 14}
-              animationMode="flyTo"
-              animationDuration={600}
-            />
-
-            <UserLocation
-              visible={true}
-              // @ts-ignore
-              onUpdate={handleLocationUpdate}
-              renderMode="native"
-            />
-
-            {/* Radius circle */}
-            {radiusCircleShape && (
-              <ShapeSource id="anch-radius-src" shape={radiusCircleShape}>
-                <FillLayer
-                  id="anch-radius-fill"
-                  style={{
-                    fillColor: status.isDragging
-                      ? 'rgba(255,71,87,0.12)'
-                      : 'rgba(0,212,170,0.10)',
-                    fillOutlineColor: status.isDragging
-                      ? theme.colors.danger
-                      : theme.colors.primary,
-                  }}
-                />
-              </ShapeSource>
-            )}
-
-            {/* Dashed anchor-to-boat line */}
-            {anchorLineShape && (
-              <ShapeSource id="anch-line-src" shape={anchorLineShape}>
-                <LineLayer
-                  id="anch-line-layer"
-                  style={{
-                    lineColor: theme.colors.warning,
-                    lineWidth: 2,
-                    lineDasharray: [4, 3],
-                  }}
-                />
-              </ShapeSource>
-            )}
-
-            {/* Anchor marker */}
-            {anchorPointShape && (
-              <ShapeSource id="anch-pt-src" shape={anchorPointShape}>
-                <CircleLayer
-                  id="anch-pt-layer"
-                  style={{
-                    circleRadius: 9,
-                    circleColor: theme.colors.primary,
-                    circleStrokeWidth: 2,
-                    circleStrokeColor: '#FFFFFF',
-                  }}
-                />
-              </ShapeSource>
-            )}
-          </MapView>
-
-          {/* Overlay when not anchored */}
-          {!status.isAnchored && (
-            <View style={styles.mapOverlay}>
-              <Icon name="anchor" size={36} color="rgba(0,212,170,0.4)" />
-              <Text style={styles.mapOverlayText}>{t('anchor.dropAnchor')}</Text>
+        {/* ── Position card (replaces mini-map) ───────────────────────────── */}
+        <GlassCard style={styles.positionCard}>
+          <View style={styles.positionRow}>
+            <Icon name="anchor" size={28} color={status.isAnchored ? theme.colors.primary : '#3A4460'} />
+            <View style={styles.positionInfo}>
+              <Text style={styles.positionCoord}>
+                {boatLat.toFixed(5)}° N  ·  {boatLng.toFixed(5)}° E
+              </Text>
+              <Text style={[styles.positionStatus, { color: status.isAnchored ? theme.colors.primary : '#5A6380' }]}>
+                {status.isAnchored
+                  ? `ANCHORED · radius ${status.radius}m`
+                  : t('anchor.dropAnchor')}
+              </Text>
+            </View>
+          </View>
+          {status.isAnchored && status.anchorPoint && (
+            <View style={styles.anchorCoordRow}>
+              <Icon name="map-pin" size={12} color="#5A6380" />
+              <Text style={styles.anchorCoordText}>
+                {status.anchorPoint.lat.toFixed(5)}° N  ·  {status.anchorPoint.lng.toFixed(5)}° E
+              </Text>
             </View>
           )}
-        </View>
+        </GlassCard>
 
         {/* ── Stats row ────────────────────────────────────────────────────── */}
         <View style={styles.statsRow}>
@@ -389,23 +278,14 @@ const styles = StyleSheet.create({
   },
   alertText: { color: theme.colors.danger, fontSize: 12, fontWeight: '700' },
   scroll: { paddingHorizontal: 16, paddingTop: 4 },
-  // Mini map
-  mapWrap: {
-    height: 220,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 14,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  mapOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(11,20,38,0.5)',
-    gap: 10,
-  },
-  mapOverlayText: { color: 'rgba(0,212,170,0.6)', fontSize: 14, fontWeight: '600' },
+  // Position card
+  positionCard: { padding: 16, marginBottom: 14 },
+  positionRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  positionInfo: { flex: 1 },
+  positionCoord: { color: '#8892B0', fontSize: 13, fontFamily: 'monospace', marginBottom: 4 },
+  positionStatus: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+  anchorCoordRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTopWidth: 0.5, borderColor: 'rgba(255,255,255,0.08)' },
+  anchorCoordText: { color: '#5A6380', fontSize: 11, fontFamily: 'monospace' },
   // Stats
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   statCard: { flex: 1, alignItems: 'center', padding: 12 },

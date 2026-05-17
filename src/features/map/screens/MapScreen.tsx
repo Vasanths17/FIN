@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -8,40 +7,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MapView, Camera, UserLocation } from '@maplibre/maplibre-react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
 
 import { rootNavigate } from '../../../navigation/navigationRef';
 import GpsStatusBar, { GpsLocation } from '../components/GpsStatusBar';
-import BorderAlertOverlay from '../../border-alert/components/BorderAlertOverlay';
 import ZoneStatusBadge from '../../border-alert/components/ZoneStatusBadge';
 import BorderDetailPanel from '../../border-alert/components/BorderDetailPanel';
 import { useBorderAlert } from '../../border-alert/hooks/useBorderAlert';
 import { requestLocationPermission } from '../../../core/location/LocationPermissions';
 
-
-const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 const MAP_OCEAN_FALLBACK = '#0a1628';
 
-// Default camera: centred on the demo position (Arabian Sea, ~47 km from EEZ)
-const DEFAULT_CENTER: [number, number] = [69.43, 12.5];
-const DEFAULT_ZOOM = 7;
-
-// Demo position used when GPS is unavailable (emulator / no permission).
-// Positioned in the Arabian Sea ~47 km east of India's EEZ boundary —
-// produces a realistic "SAFE ZONE — 47 km" display for the exam demo.
-// Change to { lat: 13.07, lng: 80.28 } for the Chennai (450 km) scenario.
 const DEMO_LOCATION: GpsLocation = {
   lat: 12.5,
   lng: 69.43,
   speedKnots: 5.2,
-  heading: 265, // heading west-southwest toward the border
+  heading: 265,
   accuracy: 12,
-  hasFix: false, // red dot → indicates simulated position
+  hasFix: false,
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface RawLocation {
   coords: {
     latitude: number;
@@ -49,7 +35,7 @@ interface RawLocation {
     altitude: number | null;
     heading: number | null;
     accuracy: number | null;
-    speed: number | null; // m/s
+    speed: number | null;
   };
   timestamp: number;
 }
@@ -57,22 +43,27 @@ interface RawLocation {
 const { height } = Dimensions.get('window');
 const MAP_HEIGHT = height * 0.58;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const fmt = (val: number, isLat: boolean) => {
+  const abs = Math.abs(val);
+  const deg = Math.floor(abs);
+  const min = ((abs - deg) * 60).toFixed(3);
+  const dir = isLat ? (val >= 0 ? 'N' : 'S') : val >= 0 ? 'E' : 'W';
+  return `${deg}° ${min}' ${dir}`;
+};
+
 const MapScreen: React.FC = () => {
   const { t } = useTranslation();
-  const cameraRef = useRef<Camera>(null);
 
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [rawLocation, setRawLocation] = useState<RawLocation | null>(null);
 
-  // Resolved GPS location (real or demo)
   const gpsLocation: GpsLocation = rawLocation
     ? {
         lat: rawLocation.coords.latitude,
         lng: rawLocation.coords.longitude,
         speedKnots:
           rawLocation.coords.speed != null
-            ? rawLocation.coords.speed * 1.943844 // m/s → knots
+            ? rawLocation.coords.speed * 1.943844
             : 0,
         heading: rawLocation.coords.heading ?? 0,
         accuracy: rawLocation.coords.accuracy ?? 0,
@@ -87,112 +78,103 @@ const MapScreen: React.FC = () => {
     heading: gpsLocation.heading,
   });
 
-  // ── Permissions ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    requestLocationPermission().then(granted => {
-      setPermissionGranted(granted);
-      if (!granted) {
-        Alert.alert(
-          t('map.gpsStatus'),
-          'Location permission denied. Showing simulated position near Chennai.',
-        );
-      }
-    });
-  }, [t]);
-
-  // ── Location update from MapLibre UserLocation ───────────────────────────
-  const handleLocationUpdate = useCallback((loc: RawLocation) => {
-    setRawLocation(loc);
+    requestLocationPermission().then(setPermissionGranted);
   }, []);
 
-  // ── Centre map on user ────────────────────────────────────────────────────
-  const centerOnUser = useCallback(() => {
-    cameraRef.current?.setCamera({
-      centerCoordinate: [gpsLocation.lng, gpsLocation.lat],
-      zoomLevel: 9,
-      animationDuration: 800,
-    });
-  }, [gpsLocation.lat, gpsLocation.lng]);
+  void permissionGranted;
+  void setRawLocation;
 
-  // ── MOB quick-launch ──────────────────────────────────────────────────────
   const launchMOB = useCallback(() => {
     rootNavigate('MOBModal');
   }, []);
 
-  // ── Offline tiles prompt ──────────────────────────────────────────────────
   const downloadTiles = useCallback(() => {
-    Alert.alert(t('map.downloadTiles'), t('map.downloadComplete'));
-  }, [t]);
+    // Offline tile download placeholder
+  }, []);
+
+  const zoneColor =
+    borderAlert.zone === 'critical' ? '#FF4757'
+    : borderAlert.zone === 'danger'   ? '#FF6B35'
+    : borderAlert.zone === 'warning'  ? '#FFA502'
+    : '#00D4AA';
 
   return (
     <View style={styles.root}>
-      {/* ── Map container ─────────────────────────────────────────────────── */}
+      {/* ── Ocean map placeholder ──────────────────────────────────────── */}
       <View style={[styles.mapContainer, { height: MAP_HEIGHT }]}>
-        <MapView
-          style={StyleSheet.absoluteFill}
-          styleURL={MAP_STYLE}
-          localizeLabels={true}
-          attributionEnabled={false}
-          logoEnabled={false}
-          pitchEnabled={false}
-          compassEnabled={false}
-          // eslint-disable-next-line react-native/no-inline-styles
-          contentInset={[0, 0, 0, 0]}
-        >
-          <Camera
-            ref={cameraRef}
-            zoomLevel={DEFAULT_ZOOM}
-            centerCoordinate={DEFAULT_CENTER}
-            animationMode="flyTo"
-            animationDuration={0}
-          />
 
-          {/* User location dot */}
-          {permissionGranted && (
-            <UserLocation
-              visible={true}
-              // @ts-ignore — onUpdate type differs between versions
-              onUpdate={handleLocationUpdate}
-              renderMode="native"
+        {/* Ocean background with grid */}
+        <View style={styles.ocean}>
+          {/* Horizontal scan lines */}
+          {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map(f => (
+            <View
+              key={`h${f}`}
+              style={[styles.gridLine, { top: `${f * 100}%` as any }]}
             />
-          )}
+          ))}
 
-          {/* EEZ boundary line overlay */}
-          <BorderAlertOverlay />
-        </MapView>
+          {/* Center crosshair */}
+          <View style={styles.crosshairWrap}>
+            <View style={styles.crosshairH} />
+            <View style={styles.crosshairV} />
+            <View style={[styles.crosshairDot, { borderColor: zoneColor }]} />
+          </View>
 
-        {/* ── Floating GPS status bar ──────────────────────────────────── */}
+          {/* EEZ zone arc label */}
+          <View style={styles.bearingChip}>
+            <Icon name="navigation" size={12} color={zoneColor} />
+            <Text style={[styles.bearingText, { color: zoneColor }]}>
+              {borderAlert.bearingLabel}  ·  {borderAlert.distanceKm} km to EEZ
+            </Text>
+          </View>
+
+          {/* Coordinate display */}
+          <View style={styles.coordBox}>
+            <Text style={styles.coordRow}>{fmt(gpsLocation.lat, true)}</Text>
+            <Text style={styles.coordRow}>{fmt(gpsLocation.lng, false)}</Text>
+            {!gpsLocation.hasFix && (
+              <Text style={styles.simTag}>SIMULATED</Text>
+            )}
+          </View>
+
+          {/* Speed / heading row */}
+          <View style={styles.speedRow}>
+            <View style={styles.speedChip}>
+              <Icon name="wind" size={11} color="#5A6380" />
+              <Text style={styles.speedText}>{gpsLocation.speedKnots.toFixed(1)} kn</Text>
+            </View>
+            <View style={styles.speedChip}>
+              <Icon name="compass" size={11} color="#5A6380" />
+              <Text style={styles.speedText}>{Math.round(gpsLocation.heading)}°</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* GPS status bar */}
         <GpsStatusBar location={gpsLocation} />
 
-        {/* ── FAB: MOB (top-left) ──────────────────────────────────────── */}
+        {/* FAB: MOB (top-left) */}
         <TouchableOpacity style={[styles.fab, styles.fabTopLeft]} onPress={launchMOB}>
           <Icon name="anchor" size={20} color="#FFFFFF" />
           <Text style={styles.fabLabel}>MOB</Text>
         </TouchableOpacity>
 
-        {/* ── FAB: Download tiles (top-right) ─────────────────────────── */}
+        {/* FAB: Download (top-right) */}
         <TouchableOpacity style={[styles.fab, styles.fabTopRight]} onPress={downloadTiles}>
           <Icon name="download-cloud" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* ── FAB: Locate me (bottom-right) ────────────────────────────── */}
-        <TouchableOpacity style={[styles.fab, styles.fabBottomRight]} onPress={centerOnUser}>
-          <Icon name="crosshair" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {/* ── Zone status badge (bottom of map) ────────────────────────── */}
+        {/* Zone status badge */}
         <ZoneStatusBadge
           zone={borderAlert.zone}
           distanceKm={borderAlert.distanceKm}
           bearingLabel={borderAlert.bearingLabel}
           etaMinutes={borderAlert.etaMinutes}
         />
-
-        {/* Ocean background shown behind tiles */}
-        <View style={[styles.oceanBg, { zIndex: -1 }]} pointerEvents="none" />
       </View>
 
-      {/* ── Scrollable detail panel ──────────────────────────────────────── */}
+      {/* ── Detail panel ──────────────────────────────────────────────────── */}
       <ScrollView
         style={styles.panel}
         contentContainerStyle={styles.panelContent}
@@ -200,30 +182,103 @@ const MapScreen: React.FC = () => {
       >
         <Text style={styles.panelTitle}>{t('border.distanceToBorder')}</Text>
         <BorderDetailPanel borderAlert={borderAlert} />
-        <View style={styles.panelFiller} />
+        <View style={{ height: 8 }} />
       </ScrollView>
     </View>
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0B1426',
-  },
+  root: { flex: 1, backgroundColor: '#0B1426' },
   mapContainer: {
     width: '100%',
     backgroundColor: MAP_OCEAN_FALLBACK,
     overflow: 'hidden',
-    position: 'relative',
   },
-  oceanBg: {
+  ocean: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: MAP_OCEAN_FALLBACK,
+    backgroundColor: '#08111e',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  // FABs
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0,212,170,0.05)',
+  },
+  crosshairWrap: {
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  crosshairH: {
+    position: 'absolute',
+    width: 60,
+    height: 1,
+    backgroundColor: 'rgba(0,212,170,0.3)',
+  },
+  crosshairV: {
+    position: 'absolute',
+    width: 1,
+    height: 60,
+    backgroundColor: 'rgba(0,212,170,0.3)',
+  },
+  crosshairDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    backgroundColor: 'rgba(0,212,170,0.15)',
+  },
+  bearingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginBottom: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  bearingText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
+  coordBox: { alignItems: 'center', gap: 2, marginBottom: 10 },
+  coordRow: {
+    color: '#8892B0',
+    fontSize: 13,
+    fontFamily: 'monospace',
+    letterSpacing: 0.5,
+  },
+  simTag: {
+    color: '#FFA502',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 4,
+    backgroundColor: 'rgba(255,165,2,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  speedRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  speedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  speedText: { color: '#5A6380', fontSize: 12 },
   fab: {
     position: 'absolute',
     width: 44,
@@ -240,37 +295,18 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   fabTopLeft: {
-    top: 118,  // below GPS status bar
+    top: 118,
     left: 14,
-    backgroundColor: 'rgba(255, 165, 2, 0.9)', // orange for MOB
+    backgroundColor: 'rgba(255, 165, 2, 0.9)',
     flexDirection: 'row',
     gap: 4,
-    width: 'auto',
+    width: 'auto' as any,
     paddingHorizontal: 10,
   },
-  fabTopRight: {
-    top: 118,
-    right: 14,
-  },
-  fabBottomRight: {
-    bottom: 80,  // above ZoneStatusBadge
-    right: 14,
-  },
-  fabLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-
-  // Detail panel
-  panel: {
-    flex: 1,
-    backgroundColor: '#0B1426',
-  },
-  panelContent: {
-    paddingBottom: 16,
-  },
+  fabTopRight: { top: 118, right: 14 },
+  fabLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  panel: { flex: 1, backgroundColor: '#0B1426' },
+  panelContent: { paddingBottom: 16 },
   panelTitle: {
     color: '#5A6380',
     fontSize: 11,
@@ -279,9 +315,6 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 2,
     textTransform: 'uppercase',
-  },
-  panelFiller: {
-    height: 8,
   },
 });
 
