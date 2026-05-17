@@ -79,11 +79,21 @@ const MapScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    requestLocationPermission().then(setPermissionGranted);
+    let watchId: number | null = null;
+    requestLocationPermission().then(granted => {
+      setPermissionGranted(granted);
+      if (granted) {
+        watchId = navigator.geolocation.watchPosition(
+          position => setRawLocation(position as any),
+          _err => { /* keep demo position on GPS error */ },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+        );
+      }
+    });
+    return () => { if (watchId !== null) navigator.geolocation.clearWatch(watchId); };
   }, []);
 
   void permissionGranted;
-  void setRawLocation;
 
   const launchMOB = useCallback(() => {
     rootNavigate('MOBModal');

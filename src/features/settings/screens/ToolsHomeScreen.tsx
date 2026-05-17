@@ -51,13 +51,13 @@ const ToolsHomeScreen: React.FC = () => {
             <View style={[styles.iconWrap, { backgroundColor: `${tool.color}20`, borderColor: `${tool.color}40` }]}>
               <Icon name={tool.icon} size={28} color={tool.color} />
             </View>
-            <Text style={styles.toolTitle}>{t(tool.titleKey)}</Text>
-            {tool.subtitleKey && (
-              <Text style={styles.toolSub}>{t(tool.subtitleKey)}</Text>
-            )}
-            <View style={styles.arrowRow}>
-              <Icon name="chevron-right" size={16} color="#5A6380" />
+            <View style={styles.textCol}>
+              <Text style={styles.toolTitle} numberOfLines={1}>{t(tool.titleKey)}</Text>
+              {tool.subtitleKey && (
+                <Text style={styles.toolSub} numberOfLines={1}>{t(tool.subtitleKey)}</Text>
+              )}
             </View>
+            <Icon name="chevron-right" size={18} color="#5A6380" />
           </GlassCard>
         ))}
       </ScrollView>
@@ -83,9 +83,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toolTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', flex: 1 },
+  textCol: { flex: 1, justifyContent: 'center', gap: 3 },
+  toolTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   toolSub: { color: '#8892B0', fontSize: 12 },
-  arrowRow: { marginLeft: 'auto' },
 });
 
 export default ToolsHomeScreen;
