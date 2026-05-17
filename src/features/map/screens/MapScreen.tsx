@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
 
+import Geolocation from '@react-native-community/geolocation';
 import { rootNavigate } from '../../../navigation/navigationRef';
 import GpsStatusBar, { GpsLocation } from '../components/GpsStatusBar';
 import ZoneStatusBadge from '../../border-alert/components/ZoneStatusBadge';
@@ -79,26 +80,11 @@ const MapScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    // Resolve whichever geolocation API is available in this RN version
-    const getGeo = (): any => {
-      // React Native 0.65–0.72 (deprecated but present)
-      if (typeof navigator !== 'undefined' && (navigator as any).geolocation?.watchPosition) {
-        return (navigator as any).geolocation;
-      }
-      // Internal RN library path (works in 0.73+)
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        return require('react-native/Libraries/Utilities/Geolocation').default;
-      } catch { return null; }
-    };
-
     let watchId: number | null = null;
     requestLocationPermission().then(granted => {
       setPermissionGranted(granted);
       if (!granted) return;
-      const Geo = getGeo();
-      if (!Geo?.watchPosition) return;
-      watchId = Geo.watchPosition(
+      watchId = Geolocation.watchPosition(
         (position: any) => setRawLocation(position),
         (_err: any) => { /* fallback to demo on error */ },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
@@ -106,7 +92,7 @@ const MapScreen: React.FC = () => {
     });
     return () => {
       if (watchId !== null) {
-        try { getGeo()?.clearWatch(watchId); } catch {}
+        Geolocation.clearWatch(watchId);
       }
     };
   }, []);
