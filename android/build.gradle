@@ -10,6 +10,7 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url uri("../node_modules/@react-native-async-storage/async-storage/android/local_repo") }
     }
     dependencies {
         classpath("com.android.tools.build:gradle")
@@ -24,6 +25,13 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url uri("../node_modules/@react-native-async-storage/async-storage/android/local_repo") }
         maven { url "https://maplibre.org/maplibre-react-native/android/maven" }
+    }
+}
+
+subprojects {
+    repositories {
+        maven { url uri("$rootDir/../node_modules/@react-native-async-storage/async-storage/android/local_repo") }
     }
 }
