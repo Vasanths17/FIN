@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { MapView, Camera, ShapeSource, CircleLayer } from '@maplibre/maplibre-react-native';
 import * as turf from '@turf/turf';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -18,10 +18,6 @@ import GradientBackground from '../../../components/GradientBackground';
 import GlassCard from '../../../components/GlassCard';
 import HotspotService, { HotspotData } from '../services/HotspotService';
 import { theme } from '../../../core/theme';
-
-if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
-  MapLibreGL.setAccessToken(null);
-}
 
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 
@@ -63,7 +59,7 @@ const StarRating: React.FC<{ rating: number; onRate?: (r: number) => void }> = (
 const HotspotScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const cameraRef = useRef<MapLibreGL.Camera>(null);
+  const cameraRef = useRef<Camera>(null);
 
   const [hotspots, setHotspots] = useState<HotspotData[]>([]);
   const [filter, setFilter] = useState<string>('All');
@@ -169,7 +165,7 @@ const HotspotScreen: React.FC = () => {
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]}>
         {/* ── Map ───────────────────────────────────────────────────────────── */}
         <View style={styles.mapWrap}>
-          <MapLibreGL.MapView
+          <MapView
             style={StyleSheet.absoluteFill}
             styleURL={MAP_STYLE}
             attributionEnabled={false}
@@ -177,7 +173,7 @@ const HotspotScreen: React.FC = () => {
             pitchEnabled={false}
             onLongPress={handleMapLongPress}
           >
-            <MapLibreGL.Camera
+            <Camera
               ref={cameraRef}
               centerCoordinate={[DEMO_LNG, DEMO_LAT]}
               zoomLevel={7}
@@ -186,13 +182,13 @@ const HotspotScreen: React.FC = () => {
             />
 
             {featureCollection.features.length > 0 && (
-              <MapLibreGL.ShapeSource
+              <ShapeSource
                 id="hotspots-src"
                 shape={featureCollection}
                 onPress={handleMarkerPress}
               >
                 {/* @ts-ignore */}
-                <MapLibreGL.CircleLayer
+                <CircleLayer
                   id="hotspot-circles"
                   style={{
                     circleRadius: 10,
@@ -210,9 +206,9 @@ const HotspotScreen: React.FC = () => {
                     circleOpacity: 0.9,
                   }}
                 />
-              </MapLibreGL.ShapeSource>
+              </ShapeSource>
             )}
-          </MapLibreGL.MapView>
+          </MapView>
 
           <View style={styles.mapHint}>
             <Text style={styles.mapHintText}>Long-press map to add spot</Text>

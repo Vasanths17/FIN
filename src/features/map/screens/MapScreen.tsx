@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { MapView, Camera, UserLocation } from '@maplibre/maplibre-react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
 
@@ -19,11 +19,6 @@ import ZoneStatusBadge from '../../border-alert/components/ZoneStatusBadge';
 import BorderDetailPanel from '../../border-alert/components/BorderDetailPanel';
 import { useBorderAlert } from '../../border-alert/hooks/useBorderAlert';
 import { requestLocationPermission } from '../../../core/location/LocationPermissions';
-
-// ─── Map config ───────────────────────────────────────────────────────────────
-if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
-  MapLibreGL.setAccessToken(null);
-}
 
 
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
@@ -65,7 +60,7 @@ const MAP_HEIGHT = height * 0.58;
 // ─── Component ────────────────────────────────────────────────────────────────
 const MapScreen: React.FC = () => {
   const { t } = useTranslation();
-  const cameraRef = useRef<MapLibreGL.Camera>(null);
+  const cameraRef = useRef<Camera>(null);
 
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [rawLocation, setRawLocation] = useState<RawLocation | null>(null);
@@ -133,7 +128,7 @@ const MapScreen: React.FC = () => {
     <View style={styles.root}>
       {/* ── Map container ─────────────────────────────────────────────────── */}
       <View style={[styles.mapContainer, { height: MAP_HEIGHT }]}>
-        <MapLibreGL.MapView
+        <MapView
           style={StyleSheet.absoluteFill}
           styleURL={MAP_STYLE}
           localizeLabels={true}
@@ -141,11 +136,10 @@ const MapScreen: React.FC = () => {
           logoEnabled={false}
           pitchEnabled={false}
           compassEnabled={false}
-          // Ocean-blue background while tiles load or offline
           // eslint-disable-next-line react-native/no-inline-styles
           contentInset={[0, 0, 0, 0]}
         >
-          <MapLibreGL.Camera
+          <Camera
             ref={cameraRef}
             zoomLevel={DEFAULT_ZOOM}
             centerCoordinate={DEFAULT_CENTER}
@@ -155,7 +149,7 @@ const MapScreen: React.FC = () => {
 
           {/* User location dot */}
           {permissionGranted && (
-            <MapLibreGL.UserLocation
+            <UserLocation
               visible={true}
               // @ts-ignore — onUpdate type differs between versions
               onUpdate={handleLocationUpdate}
@@ -165,7 +159,7 @@ const MapScreen: React.FC = () => {
 
           {/* EEZ boundary line overlay */}
           <BorderAlertOverlay />
-        </MapLibreGL.MapView>
+        </MapView>
 
         {/* ── Floating GPS status bar ──────────────────────────────────── */}
         <GpsStatusBar location={gpsLocation} />

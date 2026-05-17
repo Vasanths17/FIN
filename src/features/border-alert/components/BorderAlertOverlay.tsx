@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { ShapeSource, LineLayer } from '@maplibre/maplibre-react-native';
 
 const eezData = {
   type: 'FeatureCollection',
@@ -28,7 +28,7 @@ const eezData = {
   }],
 };
 
-const EEZ_LINE_STYLE: MapLibreGL.LineLayerStyle = {
+const EEZ_LINE_STYLE = {
   lineColor: '#FF4757',
   lineWidth: 2,
   lineOpacity: 0.7,
@@ -40,9 +40,9 @@ const BorderAlertOverlay: React.FC = () => {
   const shape = useMemo(() => eezData, []);
 
   return (
-    <MapLibreGL.ShapeSource id="eez-boundary-source" shape={shape}>
-      <MapLibreGL.LineLayer id="eez-boundary-line" style={EEZ_LINE_STYLE} />
-    </MapLibreGL.ShapeSource>
+    <ShapeSource id="eez-boundary-source" shape={shape}>
+      <LineLayer id="eez-boundary-line" style={EEZ_LINE_STYLE} />
+    </ShapeSource>
   );
 };
 

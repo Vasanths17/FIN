@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { MapView, Camera, UserLocation, ShapeSource, FillLayer, LineLayer, CircleLayer } from '@maplibre/maplibre-react-native';
 import * as turf from '@turf/turf';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -18,10 +18,6 @@ import AnchorWatchService from '../services/AnchorWatchService';
 import database from '../../../core/database/database';
 import AnchorEvent from '../models/AnchorEvent';
 import { theme } from '../../../core/theme';
-
-if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
-  MapLibreGL.setAccessToken(null);
-}
 
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 const RADII = [30, 50, 100, 200];
@@ -52,7 +48,7 @@ interface RawLocation {
 const AnchorScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const cameraRef = useRef<MapLibreGL.Camera>(null);
+  const cameraRef = useRef<Camera>(null);
   const dragPulse = useRef(new Animated.Value(1)).current;
 
   const [status, setStatus] = useState(AnchorWatchService.getStatus());
@@ -183,7 +179,7 @@ const AnchorScreen: React.FC = () => {
 
         {/* ── Mini map ────────────────────────────────────────────────────── */}
         <View style={styles.mapWrap}>
-          <MapLibreGL.MapView
+          <MapView
             style={StyleSheet.absoluteFill}
             styleURL={MAP_STYLE}
             attributionEnabled={false}
@@ -191,7 +187,7 @@ const AnchorScreen: React.FC = () => {
             pitchEnabled={false}
             compassEnabled={false}
           >
-            <MapLibreGL.Camera
+            <Camera
               ref={cameraRef}
               centerCoordinate={mapCenter}
               zoomLevel={status.isAnchored ? 16 : 14}
@@ -199,7 +195,7 @@ const AnchorScreen: React.FC = () => {
               animationDuration={600}
             />
 
-            <MapLibreGL.UserLocation
+            <UserLocation
               visible={true}
               // @ts-ignore
               onUpdate={handleLocationUpdate}
@@ -208,8 +204,8 @@ const AnchorScreen: React.FC = () => {
 
             {/* Radius circle */}
             {radiusCircleShape && (
-              <MapLibreGL.ShapeSource id="anch-radius-src" shape={radiusCircleShape}>
-                <MapLibreGL.FillLayer
+              <ShapeSource id="anch-radius-src" shape={radiusCircleShape}>
+                <FillLayer
                   id="anch-radius-fill"
                   style={{
                     fillColor: status.isDragging
@@ -220,13 +216,13 @@ const AnchorScreen: React.FC = () => {
                       : theme.colors.primary,
                   }}
                 />
-              </MapLibreGL.ShapeSource>
+              </ShapeSource>
             )}
 
             {/* Dashed anchor-to-boat line */}
             {anchorLineShape && (
-              <MapLibreGL.ShapeSource id="anch-line-src" shape={anchorLineShape}>
-                <MapLibreGL.LineLayer
+              <ShapeSource id="anch-line-src" shape={anchorLineShape}>
+                <LineLayer
                   id="anch-line-layer"
                   style={{
                     lineColor: theme.colors.warning,
@@ -234,13 +230,13 @@ const AnchorScreen: React.FC = () => {
                     lineDasharray: [4, 3],
                   }}
                 />
-              </MapLibreGL.ShapeSource>
+              </ShapeSource>
             )}
 
             {/* Anchor marker */}
             {anchorPointShape && (
-              <MapLibreGL.ShapeSource id="anch-pt-src" shape={anchorPointShape}>
-                <MapLibreGL.CircleLayer
+              <ShapeSource id="anch-pt-src" shape={anchorPointShape}>
+                <CircleLayer
                   id="anch-pt-layer"
                   style={{
                     circleRadius: 9,
@@ -249,9 +245,9 @@ const AnchorScreen: React.FC = () => {
                     circleStrokeColor: '#FFFFFF',
                   }}
                 />
-              </MapLibreGL.ShapeSource>
+              </ShapeSource>
             )}
-          </MapLibreGL.MapView>
+          </MapView>
 
           {/* Overlay when not anchored */}
           {!status.isAnchored && (
