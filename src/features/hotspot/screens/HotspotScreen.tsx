@@ -19,8 +19,8 @@ import { theme } from '../../../core/theme';
 
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 
-const DEMO_LAT = 12.5;
-const DEMO_LNG = 69.43;
+const DEMO_LAT = 10.0;
+const DEMO_LNG = 80.0;
 
 const CATCH_TYPES = ['Tuna', 'Mackerel', 'Sardine', 'Prawns', 'Crab', 'Other'] as const;
 type CatchType = typeof CATCH_TYPES[number];

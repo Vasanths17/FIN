@@ -30,7 +30,7 @@ English, Tamil (தமிழ்), Hindi (हिन्दी), Telugu (తెల�
 background=#0B1426 | primary=#00D4AA | danger=#FF4757 | warning=#FFA502
 
 ## Demo position
-lat=12.5, lng=69.43 (Arabian Sea, ~47 km from EEZ boundary)
+lat=10.0, lng=80.0 (Palk Bay, Tamil Nadu coast, ~53 km from India-Sri Lanka IMBL)
 
 ## Run
 ```

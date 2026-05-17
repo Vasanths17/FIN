@@ -19,9 +19,9 @@ import { theme } from '../../../core/theme';
 
 const RADII = [30, 50, 100, 200];
 
-// Demo position — Arabian Sea (same as MapScreen)
-const DEMO_LAT = 12.5;
-const DEMO_LNG = 69.43;
+// Demo position — Palk Bay, Tamil Nadu (same as MapScreen)
+const DEMO_LAT = 10.0;
+const DEMO_LNG = 80.0;
 
 interface HistoryEntry {
   id: string;

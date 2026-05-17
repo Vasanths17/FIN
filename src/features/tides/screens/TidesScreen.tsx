@@ -18,9 +18,9 @@ import TideService, { PORTS, TidePoint } from '../services/TideService';
 import MoonService, { MoonPhaseData, FishingQualityData, DailyMoon } from '../services/MoonService';
 import { theme } from '../../../core/theme';
 
-// Demo coordinates (Arabian Sea, same as MapScreen)
-const DEMO_LAT = 12.5;
-const DEMO_LNG = 69.43;
+// Demo coordinates (Palk Bay, Tamil Nadu, same as MapScreen)
+const DEMO_LAT = 10.0;
+const DEMO_LNG = 80.0;
 const STORAGE_KEY = 'tides_port';
 
 const CHART_WIDTH = Dimensions.get('window').width - 64; // accounting for card padding

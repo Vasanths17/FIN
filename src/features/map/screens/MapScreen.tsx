@@ -20,10 +20,10 @@ import { requestLocationPermission } from '../../../core/location/LocationPermis
 const MAP_OCEAN_FALLBACK = '#0a1628';
 
 const DEMO_LOCATION: GpsLocation = {
-  lat: 12.5,
-  lng: 69.43,
+  lat: 10.0,
+  lng: 80.0,
   speedKnots: 5.2,
-  heading: 265,
+  heading: 158,  // SSE toward India-Sri Lanka maritime boundary
   accuracy: 12,
   hasFix: false,
 };
@@ -79,18 +79,36 @@ const MapScreen: React.FC = () => {
   });
 
   useEffect(() => {
+    // Resolve whichever geolocation API is available in this RN version
+    const getGeo = (): any => {
+      // React Native 0.65–0.72 (deprecated but present)
+      if (typeof navigator !== 'undefined' && (navigator as any).geolocation?.watchPosition) {
+        return (navigator as any).geolocation;
+      }
+      // Internal RN library path (works in 0.73+)
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        return require('react-native/Libraries/Utilities/Geolocation').default;
+      } catch { return null; }
+    };
+
     let watchId: number | null = null;
     requestLocationPermission().then(granted => {
       setPermissionGranted(granted);
-      if (granted) {
-        watchId = navigator.geolocation.watchPosition(
-          position => setRawLocation(position as any),
-          _err => { /* keep demo position on GPS error */ },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
-        );
-      }
+      if (!granted) return;
+      const Geo = getGeo();
+      if (!Geo?.watchPosition) return;
+      watchId = Geo.watchPosition(
+        (position: any) => setRawLocation(position),
+        (_err: any) => { /* fallback to demo on error */ },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+      );
     });
-    return () => { if (watchId !== null) navigator.geolocation.clearWatch(watchId); };
+    return () => {
+      if (watchId !== null) {
+        try { getGeo()?.clearWatch(watchId); } catch {}
+      }
+    };
   }, []);
 
   void permissionGranted;

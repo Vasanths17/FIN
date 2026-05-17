@@ -15,8 +15,8 @@ import MOBService, { MOBStatus } from '../services/MOBService';
 import { theme } from '../../../core/theme';
 
 // Demo boat starts here; drifts east on every tick to simulate movement
-const DEMO_LAT = 12.5;
-const DEMO_LNG = 69.43;
+const DEMO_LAT = 10.0;
+const DEMO_LNG = 80.0;
 const RESCUE_HOLD_MS = 3000;
 
 const formatTime = (s: number) => {
