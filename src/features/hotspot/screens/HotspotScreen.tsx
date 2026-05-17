@@ -19,7 +19,10 @@ import GlassCard from '../../../components/GlassCard';
 import HotspotService, { HotspotData } from '../services/HotspotService';
 import { theme } from '../../../core/theme';
 
-MapLibreGL.setAccessToken(null);
+if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
+  MapLibreGL.setAccessToken(null);
+}
+
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 
 const DEMO_LAT = 12.5;

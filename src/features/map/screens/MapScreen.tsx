@@ -21,7 +21,10 @@ import { useBorderAlert } from '../../border-alert/hooks/useBorderAlert';
 import { requestLocationPermission } from '../../../core/location/LocationPermissions';
 
 // ─── Map config ───────────────────────────────────────────────────────────────
-MapLibreGL.setAccessToken(null);
+if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
+  MapLibreGL.setAccessToken(null);
+}
+
 
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 const MAP_OCEAN_FALLBACK = '#0a1628';

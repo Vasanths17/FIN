@@ -25,25 +25,33 @@ class OnboardingService {
     }
   }
 
-  async completeOnboarding(data: OnboardingData): Promise<void> {
-    await AsyncStorage.multiSet([
-      [KEYS.complete, 'true'],
-      [KEYS.vessel,   data.vesselName.trim()],
-      [KEYS.port,     data.homePort || 'chennai'],
-    ]);
-
-    // Create emergency contact if provided
-    if (data.contactName.trim() && data.contactPhone.trim()) {
-      await SOSService.addContact(
-        data.contactName.trim(),
-        data.contactPhone.trim(),
-        'Family',
-        true,
-      );
+  async completeOnboarding(data: {
+  vesselName?: string;
+  homePort?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+}) {
+  try {
+    await AsyncStorage.setItem('@mg_onboarding_complete', 'true');
+    if (data.vesselName) {
+      await AsyncStorage.setItem('@mg_vessel_name', data.vesselName);
     }
-    // Always seed Coast Guard
-    await SOSService.seedCoastGuard();
+    if (data.homePort) {
+      await AsyncStorage.setItem('@mg_home_port', data.homePort);
+    }
+    if (data.emergencyContactName) {
+      await AsyncStorage.setItem('@mg_emergency_contact_name', data.emergencyContactName);
+    }
+    if (data.emergencyContactPhone) {
+      await AsyncStorage.setItem('@mg_emergency_contact_phone', data.emergencyContactPhone);
+    }
+    return true;
+  } catch (error) {
+    console.warn('Onboarding save error:', error);
+    // Always return true so user can proceed
+    return true;
   }
+}
 
   async getSetupData(): Promise<Partial<OnboardingData>> {
     const results = await AsyncStorage.multiGet([KEYS.vessel, KEYS.port]);

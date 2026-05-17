@@ -19,7 +19,10 @@ import database from '../../../core/database/database';
 import AnchorEvent from '../models/AnchorEvent';
 import { theme } from '../../../core/theme';
 
-MapLibreGL.setAccessToken(null);
+if (MapLibreGL && typeof MapLibreGL.setAccessToken === 'function') {
+  MapLibreGL.setAccessToken(null);
+}
+
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
 const RADII = [30, 50, 100, 200];
 
